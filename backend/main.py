@@ -31,6 +31,8 @@ def get_devices():
 
 @app.get("/api/devices/{device_id}", response_model=Device)
 def get_device(device_id: int):
+    if device_id < 0:
+        raise HTTPException(status_code=400, detail="Device ID must be positive integer")
     for device in devices:
         if device.id == device_id:
             return device
