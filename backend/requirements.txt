@@ -7,3 +7,5 @@ pydantic
 pydantic-settings
 python-dotenv
 celery
+passlib
+bcrypt==3.2.2
