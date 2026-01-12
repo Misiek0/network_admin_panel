@@ -12,7 +12,7 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Network Admin Panel API",
     description="API for LAN management and device monitoring.",
-    version="1.1.1"
+    version="1.2.0"
 )
 
 
@@ -59,3 +59,10 @@ def read_locations(db: Session = Depends(get_db)):
 def read_device_types(db: Session = Depends(get_db)):
     """Retrieve a list of device types (for dropdown menus)."""
     return crud.get_device_types(db)
+
+
+# Monitoring Endpoints (Logs)
+@app.get("/scan-results/", response_model=List[schemas.ScanResult], tags=["Monitoring"])
+def read_scan_results(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
+    """Retrieve network scan history (logs)."""
+    return crud.get_scan_results(db, skip=skip, limit=limit)
