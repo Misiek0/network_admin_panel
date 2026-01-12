@@ -12,8 +12,39 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Network Admin Panel API",
     description="API for LAN management and device monitoring.",
-    version="1.0.0"
+    version="1.1.0"
 )
+
+
+@app.get("/devices/", response_model=List[schemas.Device], tags=["Devices"])
+def read_devices(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+    """Retrieve a list of all devices with pagination."""
+    devices = crud.get_devices(db, skip=skip, limit=limit)
+    return devices
+
+
+@app.post("/devices/", response_model=schemas.Device, status_code=status.HTTP_201_CREATED, tags=["Devices"])
+def create_device(device: schemas.DeviceCreate, db: Session = Depends(get_db)):
+    """Add a new device to the database."""
+    return crud.create_device(db, device=device)
+
+
+@app.get("/devices/{device_id}", response_model=schemas.Device, tags=["Devices"])
+def read_device(device_id: int, db: Session = Depends(get_db)):
+    """Retrieve details of a single device by ID."""
+    db_device = crud.get_device(db, device_id)
+    if db_device is None:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return db_device
+
+
+@app.delete("/devices/{device_id}", tags=["Devices"])
+def delete_device(device_id: int, db: Session = Depends(get_db)):
+    """Remove a device from the database."""
+    db_device = crud.delete_device(db, device_id)
+    if db_device is None:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return {"message": "Device deleted successfully"}
 
 
 # Dictionary Endpoints (for dropdowns in frontend)
