@@ -12,10 +12,11 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Network Admin Panel API",
     description="API for LAN management and device monitoring.",
-    version="1.1.0"
+    version="1.1.1"
 )
 
 
+# Device management Endpoints (Core CRUD)
 @app.get("/devices/", response_model=List[schemas.Device], tags=["Devices"])
 def read_devices(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """Retrieve a list of all devices with pagination."""
