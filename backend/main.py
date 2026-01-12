@@ -12,7 +12,7 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Network Admin Panel API",
     description="API for LAN management and device monitoring.",
-    version="1.2.0"
+    version="1.3.0"
 )
 
 
@@ -66,3 +66,13 @@ def read_device_types(db: Session = Depends(get_db)):
 def read_scan_results(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
     """Retrieve network scan history (logs)."""
     return crud.get_scan_results(db, skip=skip, limit=limit)
+
+
+# User management Endpoints (Auth)
+@app.post("/users/", response_model=schemas.User, status_code=status.HTTP_201_CREATED, tags=["Users"])
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    """Register a new user."""
+    db_user = crud.get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    return crud.create_user(db, user)
