@@ -1,4 +1,5 @@
-from pydantic import BaseModel, IPv4Address
+from pydantic import BaseModel
+from ipaddress import IPv4Address
 from typing import List, Optional
 from datetime import datetime
 
