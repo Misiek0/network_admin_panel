@@ -1,13 +1,45 @@
 import { Activity, Wifi, WifiOff, AlertTriangle } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 const Dashboard = () => {
-    // Mock data for UI visualization (will be replaced by API data later)
-  const stats = [
-    { label: 'Total Hosts', value: '45', icon: Activity, color: 'text-blue-600', bg: 'bg-blue-100' },
-    { label: 'Online', value: '38', icon: Wifi, color: 'text-green-600', bg: 'bg-green-100' },
-    { label: 'Offline', value: '7', icon: WifiOff, color: 'text-red-600', bg: 'bg-red-100' },
-    { label: 'Active Alerts', value: '2', icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-100' },
-  ];
+    // Define start state
+  const [stats, setStats] = useState([
+    { label: 'Total Hosts', value: 'Loading...', icon: Activity, color: 'text-blue-600', bg: 'bg-blue-100' },
+    { label: 'Online', value: '-', icon: Wifi, color: 'text-green-600', bg: 'bg-green-100' },
+    { label: 'Offline', value: '-', icon: WifiOff, color: 'text-red-600', bg: 'bg-red-100' },
+    { label: 'Active Alerts', value: '-', icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-100' },
+  ]);
+
+  // 2. useEffect runs once after the page loads
+  useEffect(() => {
+    fetch('http://127.0.0.1:8000/devices/')
+      .then(res => res.json())
+      .then(data => {
+        console.log("Data from API:", data);
+
+        // Calculate number of devices (array length)
+        const totalDevices = data.length;
+
+        // Update "Total Hosts" tile
+        setStats(prev => {
+            const newStats = [...prev];
+            // Update the first element (Total Hosts)
+            newStats[0] = { ...newStats[0], value: totalDevices.toString() };
+
+            // Optional: If status data is available, calculate online/offline here
+            // Keep '-' for others for now, focusing on Total Hosts
+            return newStats;
+        });
+      })
+      .catch(err => {
+        console.error("Error connecting with API:", err);
+        setStats(prev => {
+            const newStats = [...prev];
+            newStats[0] = { ...newStats[0], value: "Error" };
+            return newStats;
+        });
+      });
+  }, []);
 
     return (
     <div className="space-y-6">
