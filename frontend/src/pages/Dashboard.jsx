@@ -1,4 +1,4 @@
-import { Activity, Wifi, WifiOff, AlertTriangle } from 'lucide-react'
+import { Activity, Wifi, WifiOff, AlertTriangle, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 const Dashboard = () => {
@@ -10,6 +10,8 @@ const Dashboard = () => {
     { label: 'Active Alerts', value: '-', icon: AlertTriangle, color: 'text-orange-600', bg: 'bg-orange-100' },
   ]);
 
+  const [activities, setActivities] = useState([]);
+
   // 2. useEffect runs once after the page loads
   useEffect(() => {
     fetch('http://127.0.0.1:8000/devices/')
@@ -19,18 +21,34 @@ const Dashboard = () => {
 
         // Calculate number of devices (array length)
         const totalDevices = data.length;
+        let onlineCount = 0;
 
+        const allScans = [];
 
-        const onlineCount = data.filter(device => {
-            // Check if list exists and if it is empty
+        data.forEach(device => {
+            // Online/Offline logic calculation
             if (device.scan_results && device.scan_results.length > 0) {
-                // Pick the newest result from list
                 const lastScan = device.scan_results[device.scan_results.length - 1];
-                // return true only if status is true (Online)
-                return lastScan.status === true;
+                if (lastScan.status === true) {
+                    onlineCount++;
+                }
+
+                // Collect history for the activity log
+                device.scan_results.forEach(scan => {
+                    allScans.push({
+                        id: scan.id,
+                        device_name: device.name,
+                        status: scan.status,
+                        time: scan.timestamp
+                    });
+                });
             }
-            return false; // Brak historii = Offline
-        }).length;
+        });
+
+        // Sort logs (newest first) and take the last 5
+        allScans.sort((a, b) => new Date(b.time) - new Date(a.time));
+        const recentActivity = allScans.slice(0, 5);
+        setActivities(recentActivity);
         const offlineCount = totalDevices - onlineCount;
 
         // Update "Total Hosts" tile
@@ -42,7 +60,7 @@ const Dashboard = () => {
             // Update second element (Online Hosts)
             newStats[1] = { ...newStats[1], value: onlineCount.toString() };
 
-            // Update second element (Online Hosts)
+            // Update second element (Offline Hosts)
             newStats[2] = { ...newStats[2], value: offlineCount.toString() };
             return newStats;
         });
@@ -56,6 +74,11 @@ const Dashboard = () => {
         });
       });
   }, []);
+
+    const formatTime = (isoString) => {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
 
     return (
     <div className="space-y-6">
@@ -90,11 +113,40 @@ const Dashboard = () => {
       {/* Placeholder for future Charts/Tables */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-6">
          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-64 flex items-center justify-center text-slate-400 border-dashed">
-             Chart Placeholder (Network Traffic)
+             Network Latency Chart (Coming Soon)
          </div>
-         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-64 flex items-center justify-center text-slate-400 border-dashed">
-             Recent Activity Log Placeholder
+
+         <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100 h-80 flex flex-col">
+             <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <Clock size={20} className="text-slate-400"/> Recent Activity
+             </h3>
+
+             <div className="flex-1 overflow-auto pr-2 custom-scrollbar">
+                {activities.length > 0 ? (
+                    <div className="space-y-3">
+                        {activities.map((log) => (
+                            <div key={log.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg border border-slate-100">
+                                <div className="flex items-center gap-3">
+                                    {log.status ?
+                                        <CheckCircle size={18} className="text-green-500" /> :
+                                        <XCircle size={18} className="text-red-500" />
+                                    }
+                                    <span className="font-medium text-slate-700">{log.device_name}</span>
+                                </div>
+                                <span className="text-xs text-slate-400 font-mono">
+                                    {formatTime(log.time)}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <div className="h-full flex items-center justify-center text-slate-400 text-sm">
+                        No recent activity found.
+                    </div>
+                )}
+             </div>
          </div>
+
       </div>
 
     </div>
