@@ -20,14 +20,30 @@ const Dashboard = () => {
         // Calculate number of devices (array length)
         const totalDevices = data.length;
 
+
+        const onlineCount = data.filter(device => {
+            // Check if list exists and if it is empty
+            if (device.scan_results && device.scan_results.length > 0) {
+                // Pick the newest result from list
+                const lastScan = device.scan_results[device.scan_results.length - 1];
+                // return true only if status is true (Online)
+                return lastScan.status === true;
+            }
+            return false; // Brak historii = Offline
+        }).length;
+        const offlineCount = totalDevices - onlineCount;
+
         // Update "Total Hosts" tile
         setStats(prev => {
             const newStats = [...prev];
             // Update the first element (Total Hosts)
             newStats[0] = { ...newStats[0], value: totalDevices.toString() };
 
-            // Optional: If status data is available, calculate online/offline here
-            // Keep '-' for others for now, focusing on Total Hosts
+            // Update second element (Online Hosts)
+            newStats[1] = { ...newStats[1], value: onlineCount.toString() };
+
+            // Update second element (Online Hosts)
+            newStats[2] = { ...newStats[2], value: offlineCount.toString() };
             return newStats;
         });
       })

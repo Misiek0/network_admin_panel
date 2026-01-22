@@ -61,6 +61,8 @@ class Device(BaseModel):
     location: Optional[Location] = None
     device_type: Optional[DeviceType] = None
 
+    scan_results: List[ScanResult] = []
+
     class Config:
         from_attributes = True
 
