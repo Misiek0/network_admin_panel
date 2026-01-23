@@ -67,6 +67,23 @@ def create_device(db: Session, device: schemas.DeviceCreate):
     return db_device
 
 
+def update_device(db: Session, device_id: int, device_update: schemas.DeviceCreate):
+    db_device = db.query(models.Device).filter(models.Device.id == device_id).first()
+
+    if not db_device:
+        return None
+
+    db_device.name = device_update.name
+    db_device.ip_address = str(device_update.ip_address)
+    db_device.mac_address = device_update.mac_address
+    db_device.location_id = device_update.location_id
+    db_device.device_type_id = device_update.device_type_id
+
+    db.commit()
+    db.refresh(db_device)
+    return db_device
+
+
 def delete_device(db: Session, device_id):
     db_device = db.query(models.Device).filter(models.Device.id == device_id).first()
     if db_device:

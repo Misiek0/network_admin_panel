@@ -54,6 +54,15 @@ def read_device(device_id: int, db: Session = Depends(get_db)):
     return db_device
 
 
+@app.put("/devices/{device_id}", response_model=schemas.Device, tags=["Devices"])
+def update_device(device_id: int, device: schemas.DeviceCreate, db: Session = Depends(get_db)):
+    """Update an existing device."""
+    db_device = crud.update_device(db, device_id=device_id, device_update=device)
+    if db_device is None:
+        raise HTTPException(status_code=404, detail="Device not found")
+    return db_device
+
+
 @app.delete("/devices/{device_id}", tags=["Devices"])
 def delete_device(device_id: int, db: Session = Depends(get_db)):
     """Remove a device from the database."""
