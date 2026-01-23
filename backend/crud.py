@@ -56,7 +56,7 @@ def create_device(db: Session, device: schemas.DeviceCreate):
     db_device = models.Device(
         name=device.name,
         ip_address=str(device.ip_address),
-        mac_address=device.mac_address,
+        mac_address=device.mac_address if device.mac_address else None,
         location_id=device.location_id,
         device_type_id=device.device_type_id
     )
@@ -75,7 +75,7 @@ def update_device(db: Session, device_id: int, device_update: schemas.DeviceCrea
 
     db_device.name = device_update.name
     db_device.ip_address = str(device_update.ip_address)
-    db_device.mac_address = device_update.mac_address
+    db_device.mac_address = device_update.mac_address if device_update.mac_address else None
     db_device.location_id = device_update.location_id
     db_device.device_type_id = device_update.device_type_id
 
