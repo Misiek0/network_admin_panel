@@ -114,8 +114,13 @@ def update_device(device_id: int, device: schemas.DeviceCreate, db: Session = De
 
 
 @app.delete("/devices/{device_id}", tags=["Devices"])
-def delete_device(device_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
-    """Remove a device from the database (Requires Login)."""
+def delete_device(device_id: int, db: Session = Depends(get_db),current_user: models.User = Depends(auth.get_current_user)):
+    """Remove a device from the database (Requires Admin Privileges)."""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete devices."
+        )
     db_device = crud.delete_device(db, device_id)
     if db_device is None:
         raise HTTPException(status_code=404, detail="Device not found")
