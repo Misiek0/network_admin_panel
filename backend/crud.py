@@ -99,3 +99,13 @@ def get_scan_results(db: Session, skip: int = 0, limit: int = 50):
         .offset(skip)\
         .limit(limit)\
         .all()
+
+
+def get_device_by_ip(db: Session, ip_address: str):
+    return db.query(models.Device).filter(models.Device.ip_address == ip_address).first()
+
+
+def get_device_by_mac(db: Session, mac_address: str):
+    if not mac_address:
+        return None
+    return db.query(models.Device).filter(models.Device.mac_address == mac_address).first()

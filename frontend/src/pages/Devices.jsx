@@ -56,7 +56,13 @@ const Devices = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      if (!res.ok) throw new Error('Save failed');
+
+      // validate duplicate errors
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.detail || 'Save failed');
+      }
+
       setModalState({ type: null, device: null });
       fetchData();
     } catch (err) {

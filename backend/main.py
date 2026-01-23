@@ -42,6 +42,15 @@ def read_devices(skip: int = 0, limit: int = 100, db: Session = Depends(get_db))
 @app.post("/devices/", response_model=schemas.Device, status_code=status.HTTP_201_CREATED, tags=["Devices"])
 def create_device(device: schemas.DeviceCreate, db: Session = Depends(get_db)):
     """Add a new device to the database."""
+    # check if IP already exists
+    if crud.get_device_by_ip(db, ip_address=str(device.ip_address)):
+        raise HTTPException(status_code=400, detail=f"IP address {device.ip_address} is already in use.")
+
+    # check if MAC exists (if MAC received)
+    if device.mac_address:
+        if crud.get_device_by_mac(db, mac_address=device.mac_address):
+            raise HTTPException(status_code=400, detail=f"MAC address {device.mac_address} is already in use.")
+
     return crud.create_device(db, device=device)
 
 
@@ -56,11 +65,23 @@ def read_device(device_id: int, db: Session = Depends(get_db)):
 
 @app.put("/devices/{device_id}", response_model=schemas.Device, tags=["Devices"])
 def update_device(device_id: int, device: schemas.DeviceCreate, db: Session = Depends(get_db)):
-    """Update an existing device."""
-    db_device = crud.update_device(db, device_id=device_id, device_update=device)
+    # check if device exists
+    db_device = crud.get_device(db, device_id)
     if db_device is None:
         raise HTTPException(status_code=404, detail="Device not found")
-    return db_device
+
+    # check IP (without ACTUAL device so it don't block)
+    existing_ip = crud.get_device_by_ip(db, ip_address=str(device.ip_address))
+    if existing_ip and existing_ip.id != device_id:
+        raise HTTPException(status_code=400, detail=f"IP address {device.ip_address} duplicated.")
+
+    # same for MAC
+    if device.mac_address:
+        existing_mac = crud.get_device_by_mac(db, mac_address=device.mac_address)
+        if existing_mac and existing_mac.id != device_id:
+            raise HTTPException(status_code=400, detail=f"MAC address {device.mac_address} duplicated.")
+
+    return crud.update_device(db, device_id=device_id, device_update=device)
 
 
 @app.delete("/devices/{device_id}", tags=["Devices"])
