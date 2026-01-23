@@ -69,8 +69,12 @@ def read_devices(skip: int = 0, limit: int = 100, db: Session = Depends(get_db))
 
 
 @app.post("/devices/", response_model=schemas.Device, status_code=status.HTTP_201_CREATED, tags=["Devices"])
-def create_device(device: schemas.DeviceCreate, db: Session = Depends(get_db)):
-    """Add a new device to the database."""
+def create_device(
+    device: schemas.DeviceCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    """Add a new device (Requires Login)."""
     # check if IP already exists
     if crud.get_device_by_ip(db, ip_address=str(device.ip_address)):
         raise HTTPException(status_code=400, detail=f"IP address {device.ip_address} is already in use.")
@@ -93,7 +97,12 @@ def read_device(device_id: int, db: Session = Depends(get_db)):
 
 
 @app.put("/devices/{device_id}", response_model=schemas.Device, tags=["Devices"])
-def update_device(device_id: int, device: schemas.DeviceCreate, db: Session = Depends(get_db)):
+def update_device(
+    device_id: int,
+    device: schemas.DeviceCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
     # check if device exists
     db_device = crud.get_device(db, device_id)
     if db_device is None:
