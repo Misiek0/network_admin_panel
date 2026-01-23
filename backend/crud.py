@@ -1,4 +1,4 @@
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from passlib.context import CryptContext
 import models
 import schemas
@@ -76,4 +76,9 @@ def delete_device(db: Session, device_id):
 
 
 def get_scan_results(db: Session, skip: int = 0, limit: int = 50):
-    return db.query(models.ScanResult).order_by(models.ScanResult.timestamp.desc()).offset(skip).limit(limit).all()
+    return db.query(models.ScanResult)\
+        .options(joinedload(models.ScanResult.device))\
+        .order_by(models.ScanResult.timestamp.desc())\
+        .offset(skip)\
+        .limit(limit)\
+        .all()

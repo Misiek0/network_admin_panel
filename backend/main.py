@@ -77,9 +77,9 @@ def read_device_types(db: Session = Depends(get_db)):
 
 
 # Monitoring Endpoints (Logs)
-@app.get("/scan-results/", response_model=List[schemas.ScanResult], tags=["Monitoring"])
+@app.get("/scan-results/", response_model=List[schemas.ScanResultWithDevice], tags=["Monitoring"])
 def read_scan_results(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
-    """Retrieve network scan history (logs)."""
+    """Retrieve network scan history with device details included."""
     return crud.get_scan_results(db, skip=skip, limit=limit)
 
 

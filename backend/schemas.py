@@ -67,6 +67,18 @@ class Device(BaseModel):
         from_attributes = True
 
 
+class DevicePublic(BaseModel):
+    name: str
+    ip_address: str
+
+    class Config:
+        from_attributes = True
+
+
+class ScanResultWithDevice(ScanResult):
+    device: Optional[DevicePublic] = None
+
+
 class UserBase(BaseModel):
     email: str
     role: str = "user"
