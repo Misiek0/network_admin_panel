@@ -1,8 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import { LayoutDashboard, Router, History, Server, X, LogOut } from 'lucide-react';
 
-const Sidebar = ({ isOpen, closeSidebar, onLogout }) => {
+const Sidebar = ({ isOpen, closeSidebar, onLogout, userEmail }) => {
     const location = useLocation();
+    const safeEmail = userEmail || 'user@local';
+    const namePart = safeEmail.split('@')[0];
+    const userName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
+    const userInitials = namePart.substring(0, 2).toUpperCase();
 
     const menuItems = [
         { path: '/', label: 'Overview', icon: LayoutDashboard},
@@ -56,19 +60,19 @@ const Sidebar = ({ isOpen, closeSidebar, onLogout }) => {
 
       <div className="p-4 border-t border-slate-800 bg-slate-950">
         <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-bold text-white shadow-lg shadow-blue-900/20">
-                    AD
+            <div className="flex items-center gap-3 overflow-hidden">
+                <div className="w-8 h-8 rounded-full bg-blue-600 flex-shrink-0 flex items-center justify-center text-xs font-bold text-white shadow-lg shadow-blue-900/20">
+                    {userInitials}
                 </div>
                 <div className="overflow-hidden">
-                    <p className="text-xs font-semibold text-white truncate">Admin User</p>
-                    <p className="text-[10px] text-slate-400 truncate">admin@local</p>
+                    <p className="text-xs font-semibold text-white truncate capitalize">{userName}</p>
+                    <p className="text-[10px] text-slate-400 truncate" title={safeEmail}>{safeEmail}</p>
                 </div>
             </div>
 
             <button
                 onClick={onLogout}
-                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
+                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors flex-shrink-0"
                 title="Sign out"
             >
                 <LogOut size={18} />

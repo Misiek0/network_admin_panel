@@ -27,7 +27,7 @@ const Login = ({ onLogin }) => {
       }
 
       const data = await res.json();
-      onLogin(data.access_token);
+      onLogin(data.access_token, email);
 
     } catch (err) {
       setError('Invalid email or password. Please try again.');

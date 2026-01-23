@@ -3,7 +3,7 @@ import Sidebar from '../components/Sidebar'
 import { useState } from 'react'
 import { Menu, X } from 'lucide-react'
 
-const MainLayout = ({ onLogout }) => {
+const MainLayout = ({ onLogout, userEmail }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     return (
     <div className="flex h-screen w-full bg-slate-50 overflow-hidden">
@@ -18,6 +18,7 @@ const MainLayout = ({ onLogout }) => {
           isOpen={isSidebarOpen}
           closeSidebar={() => setIsSidebarOpen(false)}
           onLogout={onLogout}
+          userEmail={userEmail}
       />
 
       <main className="flex-1 flex flex-col min-w-0">
