@@ -15,7 +15,7 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Network Admin Panel API",
     description="API for LAN management and device monitoring.",
-    version="1.4.0"
+    version="1.5.0"
 )
 
 # CORS Section ( MiddleWare )
