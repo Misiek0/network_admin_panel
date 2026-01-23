@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import List
 from database import engine
@@ -7,13 +8,14 @@ from database import get_db
 import models
 import schemas
 import crud
+import auth
 
 # Look at all classes in models.py and create tables if they don't exist
 models.Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Network Admin Panel API",
     description="API for LAN management and device monitoring.",
-    version="1.3.0"
+    version="1.4.0"
 )
 
 # CORS Section ( MiddleWare )
@@ -29,6 +31,33 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"]
 )
+
+
+# Auth endpoint (login)
+@app.post("/token", tags=["Auth"])
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # check if user exists and password match
+    user = crud.get_user_by_email(db, email=form_data.username)
+    if not user or not auth.verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect email or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Generate token JWT
+    access_token = auth.create_access_token(data={"sub": user.email})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+# Users endpoint (register)
+@app.post("/users/", response_model=schemas.User, status_code=status.HTTP_201_CREATED, tags=["Users"])
+def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    """Register a new user."""
+    db_user = crud.get_user_by_email(db, email=user.email)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    return crud.create_user(db, user)
 
 
 # Device management Endpoints (Core CRUD)
@@ -85,8 +114,8 @@ def update_device(device_id: int, device: schemas.DeviceCreate, db: Session = De
 
 
 @app.delete("/devices/{device_id}", tags=["Devices"])
-def delete_device(device_id: int, db: Session = Depends(get_db)):
-    """Remove a device from the database."""
+def delete_device(device_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(auth.get_current_user)):
+    """Remove a device from the database (Requires Login)."""
     db_device = crud.delete_device(db, device_id)
     if db_device is None:
         raise HTTPException(status_code=404, detail="Device not found")
@@ -111,13 +140,3 @@ def read_device_types(db: Session = Depends(get_db)):
 def read_scan_results(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
     """Retrieve network scan history with device details included."""
     return crud.get_scan_results(db, skip=skip, limit=limit)
-
-
-# User management Endpoints (Auth)
-@app.post("/users/", response_model=schemas.User, status_code=status.HTTP_201_CREATED, tags=["Users"])
-def create_user(user: schemas.UserCreate, db: Session = Depends(get_db)):
-    """Register a new user."""
-    db_user = crud.get_user_by_email(db, email=user.email)
-    if db_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    return crud.create_user(db, user)

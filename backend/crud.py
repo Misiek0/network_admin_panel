@@ -1,33 +1,24 @@
 from sqlalchemy.orm import Session, joinedload
-from passlib.context import CryptContext
 import models
 import schemas
-
-# hash algorithm config
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import auth
 
 
-def get_password_hash(password):
-    return pwd_context.hash(password)
-
-
+# User management
 def get_user_by_email(db: Session, email: str):
     return db.query(models.User).filter(models.User.email == email).first()
 
 
 def create_user(db: Session, user: schemas.UserCreate):
-    # Hashing password
-    hashed_password = get_password_hash(user.password)
+    hashed_password = auth.get_password_hash(user.password)
 
-    # Adding database object
     db_user = models.User(
         email=user.email,
         hashed_password=hashed_password,
         role=user.role,
-        is_active=user.is_active
+        is_active=True
     )
 
-    # Save changes in database
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -48,8 +39,18 @@ def get_devices(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Device).offset(skip).limit(limit).all()
 
 
-def get_device(db: Session, device_id):
+def get_device(db: Session, device_id: int):
     return db.query(models.Device).filter(models.Device.id == device_id).first()
+
+
+def get_device_by_ip(db: Session, ip_address: str):
+    return db.query(models.Device).filter(models.Device.ip_address == ip_address).first()
+
+
+def get_device_by_mac(db: Session, mac_address: str):
+    if not mac_address:
+        return None
+    return db.query(models.Device).filter(models.Device.mac_address == mac_address).first()
 
 
 def create_device(db: Session, device: schemas.DeviceCreate):
@@ -84,7 +85,7 @@ def update_device(db: Session, device_id: int, device_update: schemas.DeviceCrea
     return db_device
 
 
-def delete_device(db: Session, device_id):
+def delete_device(db: Session, device_id: int):
     db_device = db.query(models.Device).filter(models.Device.id == device_id).first()
     if db_device:
         db.delete(db_device)
@@ -99,13 +100,3 @@ def get_scan_results(db: Session, skip: int = 0, limit: int = 50):
         .offset(skip)\
         .limit(limit)\
         .all()
-
-
-def get_device_by_ip(db: Session, ip_address: str):
-    return db.query(models.Device).filter(models.Device.ip_address == ip_address).first()
-
-
-def get_device_by_mac(db: Session, mac_address: str):
-    if not mac_address:
-        return None
-    return db.query(models.Device).filter(models.Device.mac_address == mac_address).first()
