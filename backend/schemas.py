@@ -8,6 +8,10 @@ class LocationBase(BaseModel):
     name: str
 
 
+class LocationCreate(BaseModel):
+    name: str
+
+
 class Location(LocationBase):
     id: int
 
