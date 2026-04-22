@@ -143,6 +143,50 @@ def read_locations(db: Session = Depends(get_db)):
     return crud.get_locations(db)
 
 
+@app.post(
+    "/locations/",
+    response_model=schemas.Location,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Dictionaries"],
+)
+def create_location(
+    location: schemas.LocationCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """Add a new location (requires login)."""
+    name = location.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Location name cannot be empty.")
+    if crud.get_location_by_name(db, name=name):
+        raise HTTPException(status_code=400, detail="A location with this name already exists.")
+    loc = schemas.LocationCreate(name=name)
+    return crud.create_location(db, loc)
+
+
+@app.delete("/locations/{location_id}", tags=["Dictionaries"])
+def delete_location(
+    location_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """Remove a location (admin only; blocked if any device uses it)."""
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete locations.",
+        )
+    if crud.count_devices_for_location(db, location_id) > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete location: one or more devices are still assigned to it.",
+        )
+    deleted = crud.delete_location(db, location_id)
+    if deleted is None:
+        raise HTTPException(status_code=404, detail="Location not found")
+    return {"message": "Location deleted successfully"}
+
+
 @app.get("/device-types/", response_model=List[schemas.DeviceType], tags=["Dictionaries"])
 def read_device_types(db: Session = Depends(get_db)):
     """Retrieve a list of device types (for dropdown menus)."""
