@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Router, History, Server, X, LogOut } from 'lucide-react';
+import { LayoutDashboard, Router, MapPin, History, Server, X, LogOut } from 'lucide-react';
 
 const Sidebar = ({ isOpen, closeSidebar, onLogout, userEmail }) => {
     const location = useLocation();
@@ -11,6 +11,7 @@ const Sidebar = ({ isOpen, closeSidebar, onLogout, userEmail }) => {
     const menuItems = [
         { path: '/', label: 'Overview', icon: LayoutDashboard},
         { path: '/devices', label: 'Devices', icon: Router},
+        { path: '/localizations', label: 'Localizations', icon: MapPin},
         { path: '/history', label: 'Scan History', icon: History},
     ];
 
