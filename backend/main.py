@@ -137,10 +137,18 @@ def delete_device(device_id: int, db: Session = Depends(get_db),current_user: mo
 
 
 # Dictionary Endpoints (for dropdowns in frontend)
-@app.get("/locations/", response_model=List[schemas.Location], tags=["Dictionaries"])
+@app.get("/locations/", response_model=List[schemas.LocationWithCount], tags=["Dictionaries"])
 def read_locations(db: Session = Depends(get_db)):
     """Retrieve a list of available locations (for dropdown menus)."""
-    return crud.get_locations(db)
+    locations = crud.get_locations(db)
+    return [
+        schemas.LocationWithCount(
+            id=location.id,
+            name=location.name,
+            devices_count=crud.count_devices_for_location(db, location.id),
+        )
+        for location in locations
+    ]
 
 
 @app.post(
@@ -162,6 +170,30 @@ def create_location(
         raise HTTPException(status_code=400, detail="A location with this name already exists.")
     loc = schemas.LocationCreate(name=name)
     return crud.create_location(db, loc)
+
+
+@app.put("/locations/{location_id}", response_model=schemas.Location, tags=["Dictionaries"])
+def update_location(
+    location_id: int,
+    location: schemas.LocationCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """Update a location name (requires login)."""
+    db_location = crud.get_location(db, location_id)
+    if db_location is None:
+        raise HTTPException(status_code=404, detail="Location not found")
+
+    name = location.name.strip()
+    if not name:
+        raise HTTPException(status_code=400, detail="Location name cannot be empty.")
+
+    existing = crud.get_location_by_name(db, name=name)
+    if existing and existing.id != location_id:
+        raise HTTPException(status_code=400, detail="A location with this name already exists.")
+
+    loc = schemas.LocationCreate(name=name)
+    return crud.update_location(db, location_id=location_id, location_update=loc)
 
 
 @app.delete("/locations/{location_id}", tags=["Dictionaries"])

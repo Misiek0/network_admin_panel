@@ -46,6 +46,16 @@ def create_location(db: Session, location: schemas.LocationCreate):
     return db_location
 
 
+def update_location(db: Session, location_id: int, location_update: schemas.LocationCreate):
+    db_location = get_location(db, location_id)
+    if not db_location:
+        return None
+    db_location.name = location_update.name.strip()
+    db.commit()
+    db.refresh(db_location)
+    return db_location
+
+
 def count_devices_for_location(db: Session, location_id: int) -> int:
     return (
         db.query(models.Device)

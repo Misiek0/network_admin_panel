@@ -19,6 +19,10 @@ class Location(LocationBase):
         from_attributes = True
 
 
+class LocationWithCount(Location):
+    devices_count: int = 0
+
+
 class DeviceTypeBase(BaseModel):
     name: str
     icon_name: Optional[str] = None
