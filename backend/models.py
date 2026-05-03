@@ -68,3 +68,31 @@ class Location(Base):
 
     # Relationship: One Location -> Many Devices
     devices = relationship("Device", back_populates="location")
+
+
+class DiscoveryNetwork(Base):
+    __tablename__ = "discovery_networks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    cidr = Column(String, unique=True, nullable=False)
+    last_discovery = Column(DateTime(timezone=True), nullable=True)
+
+    discovered_hosts = relationship(
+        "DiscoveredHost",
+        back_populates="network",
+        cascade="all, delete",
+    )
+
+
+class DiscoveredHost(Base):
+    __tablename__ = "discovered_hosts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    network_id = Column(Integer, ForeignKey("discovery_networks.id"), nullable=False)
+    ip_address = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="pending")
+    proposed_name = Column(String, nullable=True)
+    discovered_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    network = relationship("DiscoveryNetwork", back_populates="discovered_hosts")

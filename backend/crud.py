@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session, joinedload
+from datetime import datetime
 import models
 import schemas
 import auth
@@ -75,6 +76,93 @@ def delete_location(db: Session, location_id: int):
 
 def get_device_types(db: Session):
     return db.query(models.DeviceType).all()
+
+
+def get_discovery_networks(db: Session):
+    return db.query(models.DiscoveryNetwork).order_by(models.DiscoveryNetwork.id.asc()).all()
+
+
+def get_discovery_network(db: Session, network_id: int):
+    return db.query(models.DiscoveryNetwork).filter(models.DiscoveryNetwork.id == network_id).first()
+
+
+def get_discovery_network_by_name(db: Session, name: str):
+    return db.query(models.DiscoveryNetwork).filter(models.DiscoveryNetwork.name == name).first()
+
+
+def get_discovery_network_by_cidr(db: Session, cidr: str):
+    return db.query(models.DiscoveryNetwork).filter(models.DiscoveryNetwork.cidr == cidr).first()
+
+
+def create_discovery_network(db: Session, network: schemas.DiscoveryNetworkCreate):
+    db_network = models.DiscoveryNetwork(name=network.name.strip(), cidr=network.cidr.strip())
+    db.add(db_network)
+    db.commit()
+    db.refresh(db_network)
+    return db_network
+
+
+def update_discovery_network(db: Session, network_id: int, network: schemas.DiscoveryNetworkCreate):
+    db_network = get_discovery_network(db, network_id)
+    if not db_network:
+        return None
+
+    db_network.name = network.name.strip()
+    db_network.cidr = network.cidr.strip()
+    db.commit()
+    db.refresh(db_network)
+    return db_network
+
+
+def delete_discovery_network(db: Session, network_id: int):
+    db_network = get_discovery_network(db, network_id)
+    if not db_network:
+        return None
+    db.delete(db_network)
+    db.commit()
+    return db_network
+
+
+def count_pending_discovered_hosts(db: Session, network_id: int) -> int:
+    return db.query(models.DiscoveredHost).filter(
+        models.DiscoveredHost.network_id == network_id,
+        models.DiscoveredHost.status == "pending"
+    ).count()
+
+
+def get_pending_discovered_hosts(db: Session):
+    return db.query(models.DiscoveredHost).filter(
+        models.DiscoveredHost.status == "pending"
+    ).order_by(models.DiscoveredHost.discovered_at.asc()).all()
+
+
+def get_discovered_host(db: Session, host_id: int):
+    return db.query(models.DiscoveredHost).filter(models.DiscoveredHost.id == host_id).first()
+
+
+def create_discovered_host_if_missing(db: Session, network_id: int, ip_address: str):
+    existing = db.query(models.DiscoveredHost).filter(
+        models.DiscoveredHost.ip_address == ip_address,
+        models.DiscoveredHost.status == "pending"
+    ).first()
+    if existing:
+        return None
+
+    db_host = models.DiscoveredHost(
+        network_id=network_id,
+        ip_address=ip_address,
+        status="pending",
+        discovered_at=datetime.now(),
+    )
+    db.add(db_host)
+    return db_host
+
+
+def mark_network_discovery_time(db: Session, network_id: int):
+    db_network = get_discovery_network(db, network_id)
+    if db_network:
+        db_network.last_discovery = datetime.now()
+        db.add(db_network)
 
 
 # Devices(Core)

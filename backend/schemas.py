@@ -23,6 +23,45 @@ class LocationWithCount(Location):
     devices_count: int = 0
 
 
+class DiscoveryNetworkBase(BaseModel):
+    name: str
+    cidr: str
+
+
+class DiscoveryNetworkCreate(DiscoveryNetworkBase):
+    pass
+
+
+class DiscoveryNetwork(DiscoveryNetworkBase):
+    id: int
+    last_discovery: Optional[datetime] = None
+    new_hosts_count: int = 0
+
+    class Config:
+        from_attributes = True
+
+
+class DiscoveredHostBase(BaseModel):
+    ip_address: str
+    status: str
+    proposed_name: Optional[str] = None
+    discovered_at: datetime
+
+
+class DiscoveredHost(DiscoveredHostBase):
+    id: int
+    network_id: int
+
+    class Config:
+        from_attributes = True
+
+
+class DiscoveredHostAccept(BaseModel):
+    name: str
+    location_id: int
+    device_type_id: int
+
+
 class DeviceTypeBase(BaseModel):
     name: str
     icon_name: Optional[str] = None
