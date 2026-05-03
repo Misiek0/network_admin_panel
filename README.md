@@ -14,7 +14,7 @@ The system features a **secure REST API**, a **responsive React frontend**, and 
 * **⚡ Async Network Scanning:** Background Python worker (`asyncio`) monitoring device status every 60 seconds without freezing the API.
 * **🛰 Host Discovery (Nmap):** Separate worker scans configured CIDR networks and proposes only new hosts (without duplicates already present in inventory).
 * **📱 Responsive Design:** Fully optimized UI for both desktop and mobile devices.
-* **📜 Scan History:** Detailed logs of connectivity checks stored in PostgreSQL.
+* **📜 Logs:** Unified, time-ordered log view combining connectivity scan results and host discovery events (newly detected unknown devices) — backed by PostgreSQL.
 
 ---
 
@@ -53,8 +53,8 @@ Inventory management with status indicators.
 
 ![Devices Desktop](docs/screens/devices_desktop.png)
 
-### 🔐 Security & History
-Secure login screen and detailed scan logs.
+### 🔐 Security & Logs
+Secure login screen and the unified Logs view (monitoring scans + host discovery events).
 
 <p align="left">
   <img src="docs/screens/login_desktop.png" width="45%" />
