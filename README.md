@@ -2,7 +2,7 @@
 
 **Network Admin Panel** is a modern, full-stack web application designed for real-time monitoring and management of local network devices. It allows administrators to maintain a detailed inventory of hosts, track their availability (Online/Offline status), and view historical connectivity data.
 
-The system features a **secure REST API**, a **responsive React frontend**, and an **asynchronous background worker** for non-blocking network scanning.
+The system features a **secure REST API**, a **responsive React frontend**, and **asynchronous background workers** for non-blocking network scanning and host discovery.
 
 ---
 
@@ -12,6 +12,7 @@ The system features a **secure REST API**, a **responsive React frontend**, and 
 * **🔐 Secure Authentication:** JWT-based login system with role management (Admin/User).
 * **🔎 Device Inventory:** Full CRUD (Create, Read, Update, Delete) operations for network devices.
 * **⚡ Async Network Scanning:** Background Python worker (`asyncio`) monitoring device status every 60 seconds without freezing the API.
+* **🛰 Host Discovery (Nmap):** Separate worker scans configured CIDR networks and proposes only new hosts (without duplicates already present in inventory).
 * **📱 Responsive Design:** Fully optimized UI for both desktop and mobile devices.
 * **📜 Scan History:** Detailed logs of connectivity checks stored in PostgreSQL.
 
@@ -85,7 +86,7 @@ To run the application locally, you need **Docker** and **Python 3.10+**.
 
 ### Option A: Manual Setup (Recommended for Development)
 
-Since the project uses a background worker, you need to run three components:
+Since the project uses background workers, you need to run four components:
 
 1.  **Database:**
     ```bash
@@ -100,14 +101,22 @@ Since the project uses a background worker, you need to run three components:
     ```
     *Access API Docs at: http://localhost:8000/docs*
 
-3.  **Background Worker (Terminal 2):**
+3.  **Monitoring Worker (Terminal 2):**
     This service runs the infinite scanning loop.
     ```bash
     cd backend
     python worker.py
     ```
 
-4.  **Frontend (Terminal 3):**
+4.  **Host Discovery Worker (Terminal 3):**
+    This service discovers new hosts in configured networks using `nmap`.
+    Make sure `nmap` is installed on your machine and available in PATH.
+    ```bash
+    cd backend
+    python discovery_worker.py
+    ```
+
+5.  **Frontend (Terminal 4):**
     ```bash
     cd frontend
     npm install
@@ -116,3 +125,19 @@ Since the project uses a background worker, you need to run three components:
     *Access App at: http://localhost:5173*
 
 ---
+
+### Option B: Docker Compose
+
+The Docker image for backend/workers includes all required tools, including `nmap`.
+
+```bash
+docker compose up --build
+```
+
+This starts:
+- API service (`backend`)
+- Monitoring worker (`monitor-worker`)
+- Host discovery worker (`discovery-worker`)
+- PostgreSQL (`db`)
+- RabbitMQ (`rabbitmq`)
+- pgAdmin (`pgadmin`)
