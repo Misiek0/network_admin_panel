@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from typing import List
+import ipaddress
 from database import engine
 from database import get_db
 import models
@@ -223,6 +224,177 @@ def delete_location(
 def read_device_types(db: Session = Depends(get_db)):
     """Retrieve a list of device types (for dropdown menus)."""
     return crud.get_device_types(db)
+
+
+# Host discovery endpoints
+@app.get("/discovery-networks/", response_model=List[schemas.DiscoveryNetwork], tags=["Discovery"])
+def read_discovery_networks(db: Session = Depends(get_db)):
+    networks = crud.get_discovery_networks(db)
+    return [
+        schemas.DiscoveryNetwork(
+            id=network.id,
+            name=network.name,
+            cidr=network.cidr,
+            last_discovery=network.last_discovery,
+            new_hosts_count=crud.count_pending_discovered_hosts(db, network.id),
+        )
+        for network in networks
+    ]
+
+
+@app.post(
+    "/discovery-networks/",
+    response_model=schemas.DiscoveryNetwork,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Discovery"],
+)
+def create_discovery_network(
+    network: schemas.DiscoveryNetworkCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    name = network.name.strip()
+    cidr = network.cidr.strip()
+
+    if not name:
+        raise HTTPException(status_code=400, detail="Network name cannot be empty.")
+
+    try:
+        ipaddress.ip_network(cidr, strict=False)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid network address. Use CIDR format x.x.x.x/x.")
+
+    if crud.get_discovery_network_by_name(db, name):
+        raise HTTPException(status_code=400, detail="A discovery network with this name already exists.")
+
+    if crud.get_discovery_network_by_cidr(db, cidr):
+        raise HTTPException(status_code=400, detail="This network address is already configured.")
+
+    created = crud.create_discovery_network(db, schemas.DiscoveryNetworkCreate(name=name, cidr=cidr))
+    return schemas.DiscoveryNetwork(
+        id=created.id,
+        name=created.name,
+        cidr=created.cidr,
+        last_discovery=created.last_discovery,
+        new_hosts_count=0,
+    )
+
+
+@app.put("/discovery-networks/{network_id}", response_model=schemas.DiscoveryNetwork, tags=["Discovery"])
+def update_discovery_network(
+    network_id: int,
+    network: schemas.DiscoveryNetworkCreate,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    db_network = crud.get_discovery_network(db, network_id)
+    if db_network is None:
+        raise HTTPException(status_code=404, detail="Discovery network not found")
+
+    name = network.name.strip()
+    cidr = network.cidr.strip()
+
+    if not name:
+        raise HTTPException(status_code=400, detail="Network name cannot be empty.")
+
+    try:
+        ipaddress.ip_network(cidr, strict=False)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid network address. Use CIDR format x.x.x.x/x.")
+
+    existing_name = crud.get_discovery_network_by_name(db, name)
+    if existing_name and existing_name.id != network_id:
+        raise HTTPException(status_code=400, detail="A discovery network with this name already exists.")
+
+    existing_cidr = crud.get_discovery_network_by_cidr(db, cidr)
+    if existing_cidr and existing_cidr.id != network_id:
+        raise HTTPException(status_code=400, detail="This network address is already configured.")
+
+    updated = crud.update_discovery_network(db, network_id, schemas.DiscoveryNetworkCreate(name=name, cidr=cidr))
+    return schemas.DiscoveryNetwork(
+        id=updated.id,
+        name=updated.name,
+        cidr=updated.cidr,
+        last_discovery=updated.last_discovery,
+        new_hosts_count=crud.count_pending_discovered_hosts(db, updated.id),
+    )
+
+
+@app.delete("/discovery-networks/{network_id}", tags=["Discovery"])
+def delete_discovery_network(
+    network_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    if current_user.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have permission to delete discovery networks.",
+        )
+    deleted = crud.delete_discovery_network(db, network_id)
+    if deleted is None:
+        raise HTTPException(status_code=404, detail="Discovery network not found")
+    return {"message": "Discovery network deleted successfully"}
+
+
+@app.get("/discovered-hosts/pending", response_model=List[schemas.DiscoveredHost], tags=["Discovery"])
+def read_pending_discovered_hosts(db: Session = Depends(get_db)):
+    return crud.get_pending_discovered_hosts(db)
+
+
+@app.post("/discovered-hosts/{host_id}/accept", response_model=schemas.Device, tags=["Discovery"])
+def accept_discovered_host(
+    host_id: int,
+    payload: schemas.DiscoveredHostAccept,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    db_host = crud.get_discovered_host(db, host_id)
+    if db_host is None:
+        raise HTTPException(status_code=404, detail="Discovered host not found")
+    if db_host.status != "pending":
+        raise HTTPException(status_code=409, detail="This host has already been processed.")
+
+    normalized_name = payload.name.strip()
+    if not normalized_name:
+        raise HTTPException(status_code=400, detail="Device name cannot be empty.")
+
+    if crud.get_device_by_ip(db, db_host.ip_address):
+        db_host.status = "added"
+        db_host.proposed_name = normalized_name
+        db.commit()
+        raise HTTPException(status_code=409, detail="Host already exists in devices.")
+
+    device_data = schemas.DeviceCreate(
+        name=normalized_name,
+        ip_address=db_host.ip_address,
+        mac_address=None,
+        location_id=payload.location_id,
+        device_type_id=payload.device_type_id,
+    )
+    created_device = crud.create_device(db, device_data)
+    db_host.status = "added"
+    db_host.proposed_name = normalized_name
+    db.commit()
+    db.refresh(created_device)
+    return created_device
+
+
+@app.post("/discovered-hosts/{host_id}/skip", tags=["Discovery"])
+def skip_discovered_host(
+    host_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    db_host = crud.get_discovered_host(db, host_id)
+    if db_host is None:
+        raise HTTPException(status_code=404, detail="Discovered host not found")
+    if db_host.status != "pending":
+        raise HTTPException(status_code=409, detail="This host has already been processed.")
+
+    db_host.status = "skipped"
+    db.commit()
+    return {"message": "Discovered host skipped"}
 
 
 # Monitoring Endpoints (Logs)
