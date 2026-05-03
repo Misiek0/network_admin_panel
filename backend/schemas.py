@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from ipaddress import IPv4Address
-from typing import List, Optional
+from typing import List, Literal, Optional
 from datetime import datetime
 
 
@@ -124,6 +124,18 @@ class DevicePublic(BaseModel):
 
 class ScanResultWithDevice(ScanResult):
     device: Optional[DevicePublic] = None
+
+
+class LogEntry(BaseModel):
+    # Composite id ensures uniqueness across the merged scan/discovery streams.
+    id: str
+    event_type: Literal["scan", "discovery"]
+    timestamp: datetime
+    device_name: str
+    ip_address: Optional[str] = None
+    status: Optional[bool] = None
+    response_time_ms: Optional[int] = None
+    message: Optional[str] = None
 
 
 class UserBase(BaseModel):

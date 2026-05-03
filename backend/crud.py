@@ -231,3 +231,67 @@ def get_scan_results(db: Session, skip: int = 0, limit: int = 50):
         .offset(skip)\
         .limit(limit)\
         .all()
+
+
+def _scan_to_log_entry(scan: models.ScanResult) -> dict:
+    device = scan.device
+    return {
+        "id": f"scan-{scan.id}",
+        "event_type": "scan",
+        "timestamp": scan.timestamp,
+        "device_name": device.name if device else "Unknown",
+        "ip_address": device.ip_address if device else None,
+        "status": scan.status,
+        "response_time_ms": scan.response_time_ms,
+        "message": scan.log_message,
+    }
+
+
+def _discovery_to_log_entry(host: models.DiscoveredHost) -> dict:
+    return {
+        "id": f"discovery-{host.id}",
+        "event_type": "discovery",
+        "timestamp": host.discovered_at,
+        "device_name": "unknown",
+        "ip_address": host.ip_address,
+        "status": None,
+        "response_time_ms": None,
+        "message": f"Warning, new device detected with IP: {host.ip_address}",
+    }
+
+
+def get_logs(
+    db: Session,
+    skip: int = 0,
+    limit: int = 50,
+    event_type: str | None = None,
+):
+    """
+    Return a unified, time-ordered stream of monitoring scans and host discovery events.
+    Both sources are over-fetched to (skip + limit) before merging so the resulting page
+    is correct after sorting by timestamp.
+    """
+    fetch_size = skip + limit
+    entries: list[dict] = []
+
+    if event_type in (None, "scan"):
+        scans = (
+            db.query(models.ScanResult)
+            .options(joinedload(models.ScanResult.device))
+            .order_by(models.ScanResult.timestamp.desc())
+            .limit(fetch_size)
+            .all()
+        )
+        entries.extend(_scan_to_log_entry(scan) for scan in scans)
+
+    if event_type in (None, "discovery"):
+        hosts = (
+            db.query(models.DiscoveredHost)
+            .order_by(models.DiscoveredHost.discovered_at.desc())
+            .limit(fetch_size)
+            .all()
+        )
+        entries.extend(_discovery_to_log_entry(host) for host in hosts)
+
+    entries.sort(key=lambda entry: entry["timestamp"], reverse=True)
+    return entries[skip : skip + limit]

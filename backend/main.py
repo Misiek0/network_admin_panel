@@ -402,3 +402,19 @@ def skip_discovered_host(
 def read_scan_results(skip: int = 0, limit: int = 50, db: Session = Depends(get_db)):
     """Retrieve network scan history with device details included."""
     return crud.get_scan_results(db, skip=skip, limit=limit)
+
+
+@app.get("/logs/", response_model=List[schemas.LogEntry], tags=["Monitoring"])
+def read_logs(
+    skip: int = 0,
+    limit: int = 50,
+    event_type: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieve a unified log stream containing both monitoring scan results
+    and host discovery events. Filter with `event_type=scan` or `event_type=discovery`.
+    """
+    if event_type not in (None, "scan", "discovery"):
+        raise HTTPException(status_code=400, detail="event_type must be 'scan' or 'discovery'.")
+    return crud.get_logs(db, skip=skip, limit=limit, event_type=event_type)
