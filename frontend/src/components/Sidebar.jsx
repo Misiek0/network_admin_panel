@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Router, MapPin, Radar, History, Server, X, LogOut } from 'lucide-react';
+import { LayoutDashboard, Router, MapPin, Radar, ScrollText, Server, X, LogOut } from 'lucide-react';
 
 const Sidebar = ({ isOpen, closeSidebar, onLogout, userEmail }) => {
     const location = useLocation();
@@ -13,7 +13,7 @@ const Sidebar = ({ isOpen, closeSidebar, onLogout, userEmail }) => {
         { path: '/devices', label: 'Devices', icon: Router},
         { path: '/localizations', label: 'Localizations', icon: MapPin},
         { path: '/host-discovery', label: 'Host Discovery', icon: Radar},
-        { path: '/history', label: 'Scan History', icon: History},
+        { path: '/logs', label: 'Logs', icon: ScrollText},
     ];
 
     return (

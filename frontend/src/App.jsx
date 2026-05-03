@@ -4,7 +4,7 @@ import Dashboard from './pages/Dashboard.jsx';
 import Devices from './pages/Devices.jsx';
 import Localizations from './pages/Localizations.jsx';
 import HostDiscovery from './pages/HostDiscovery.jsx';
-import History from './pages/History.jsx';
+import Logs from './pages/Logs.jsx';
 import MainLayout from "./layouts/MainLayout.jsx";
 import Login from "./pages/Login.jsx";
 
@@ -39,7 +39,7 @@ function App() {
                     <Route path="/devices" element={<Devices />} />
                     <Route path="/localizations" element={<Localizations />} />
                     <Route path="/host-discovery" element={<HostDiscovery />} />
-                    <Route path="/history" element={<History />} />
+                    <Route path="/logs" element={<Logs />} />
                 </Route>
             </Routes>
         </BrowserRouter>
