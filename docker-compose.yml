@@ -14,6 +14,30 @@ services:
       - db
       - rabbitmq
 
+  monitor-worker:
+    build: ./backend
+    container_name: monitor_worker
+    command: python worker.py
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - rabbitmq
+
+  discovery-worker:
+    build: ./backend
+    container_name: discovery_worker
+    command: python discovery_worker.py
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - rabbitmq
+
   db:
     image: postgres:16
     container_name: postgres

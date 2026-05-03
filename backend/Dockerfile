@@ -10,7 +10,7 @@ WORKDIR /app
 
 # Instalujemy zależności systemowe (potrzebne dla bibliotek)
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends gcc libpq-dev iputils-ping\
+    && apt-get install -y --no-install-recommends gcc libpq-dev iputils-ping nmap \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
