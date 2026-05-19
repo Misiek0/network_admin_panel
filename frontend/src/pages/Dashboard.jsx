@@ -12,28 +12,28 @@ const Dashboard = () => {
 
   const [activities, setActivities] = useState([]);
 
-  // 2. useEffect runs once after the page loads
   useEffect(() => {
-    fetch('http://127.0.0.1:8000/devices/')
-      .then(res => res.json())
-      .then(data => {
-        console.log("Data from API:", data);
+    const fetchDashboardData = async () => {
+      try {
+        const [devicesRes, pendingRes] = await Promise.all([
+          fetch('http://127.0.0.1:8000/devices/'),
+          fetch('http://127.0.0.1:8000/discovered-hosts/pending'),
+        ]);
 
-        // Calculate number of devices (array length)
-        const totalDevices = data.length;
+        const devices = await devicesRes.json();
+        const pendingHosts = pendingRes.ok ? await pendingRes.json() : [];
+
+        const totalDevices = devices.length;
         let onlineCount = 0;
-
         const allScans = [];
 
-        data.forEach(device => {
-            // Online/Offline logic calculation
+        devices.forEach(device => {
             if (device.scan_results && device.scan_results.length > 0) {
                 const lastScan = device.scan_results[device.scan_results.length - 1];
                 if (lastScan.status === true) {
                     onlineCount++;
                 }
 
-                // Collect history for the activity log
                 device.scan_results.forEach(scan => {
                     allScans.push({
                         id: scan.id,
@@ -45,34 +45,33 @@ const Dashboard = () => {
             }
         });
 
-        // Sort logs (newest first) and take the last 5
         allScans.sort((a, b) => new Date(b.time) - new Date(a.time));
-        const recentActivity = allScans.slice(0, 5);
-        setActivities(recentActivity);
-        const offlineCount = totalDevices - onlineCount;
+        setActivities(allScans.slice(0, 5));
 
-        // Update "Total Hosts" tile
+        const offlineCount = totalDevices - onlineCount;
+        const pendingCount = Array.isArray(pendingHosts) ? pendingHosts.length : 0;
+
         setStats(prev => {
             const newStats = [...prev];
-            // Update the first element (Total Hosts)
             newStats[0] = { ...newStats[0], value: totalDevices.toString() };
-
-            // Update second element (Online Hosts)
             newStats[1] = { ...newStats[1], value: onlineCount.toString() };
-
-            // Update second element (Offline Hosts)
             newStats[2] = { ...newStats[2], value: offlineCount.toString() };
+            newStats[3] = { ...newStats[3], value: pendingCount.toString() };
             return newStats;
         });
-      })
-      .catch(err => {
+      } catch (err) {
         console.error("Error connecting with API:", err);
         setStats(prev => {
             const newStats = [...prev];
             newStats[0] = { ...newStats[0], value: "Error" };
             return newStats;
         });
-      });
+      }
+    };
+
+    fetchDashboardData();
+    const intervalId = setInterval(fetchDashboardData, 10000);
+    return () => clearInterval(intervalId);
   }, []);
 
     const formatTime = (isoString) => {
